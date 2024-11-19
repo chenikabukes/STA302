@@ -136,9 +136,62 @@ modelo <- lm(log_usd_pledged_real ~ category_group + continent + log_usd_goal_re
 ```{r}
 plot(modelo)
 ```
+```{r}
+# Perform ANOVA test
+anova_result <- anova(modelo)
+anova_result
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+# Check the significance of the model
+if (anova_result$`Pr(>F)`[1] < 0.05) {
+  cat("The linear model is statistically significant. Proceeding to t-tests.\n")
+} else {
+  cat("The linear model is not statistically significant. Consider revising the model.\n")
+}
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+```{r}
+# Summary of the model to extract coefficient p-values
+summary_model <- summary(modelo)
+coeff_p_values <- summary_model$coefficients[, 4]  
+significant_coeff <- coeff_p_values[coeff_p_values < 0.05]  
+non_significant_coeff <- coeff_p_values[coeff_p_values >= 0.05] 
+
+if (length(non_significant_coeff) > 0) {
+  cat("There are coefficients that are not statistically significant:\n")
+  print(non_significant_coeff)
+  cat("Proceeding to partial F-test.\n")
+} else {
+  cat("All coefficients are statistically significant. The model is suitable as is.\n")
+}
+
+```
+
+```{r}
+if (length(non_significant_coeff) > 0) {
+  reduced_model <- lm(log_usd_pledged_real ~ category_group + continent + log_usd_goal_real + duration_cat, data = kst) 
+  partial_f_test <- anova(reduced_model, modelo)
+  print(partial_f_test)
+  
+  f_stat <- partial_f_test$`F`[2]
+  p_value <- partial_f_test$`Pr(>F)`[2]
+  if (p_value < 0.05) {
+    cat("The reduced model is NOT appropriate. Retain the original model.\n")
+  } else {
+    cat("The reduced model is appropriate. Some predictors can be removed.\n")
+  }
+} else {
+  cat("No need for a partial F-test as all predictors are significant.\n")
+}
+
+```
+
+
+```{r}
+kst$predicted <- predict(modelo, newdata = kst)
+ggplot(kst, aes(x = log_usd_pledged_real, y = predicted)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1, color = "red") +
+  theme_minimal() +
+  labs(title = "Actual vs Predicted", x = "Actual Log Pledged", y = "Predicted Log Pledged")
+```
