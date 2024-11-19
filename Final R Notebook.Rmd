@@ -1,0 +1,144 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(broom)
+```
+
+
+
+```{r}
+#Read Data
+ks <- read.csv("/Users/chenikabukes/Downloads/archive/ks-projects-201801.csv")
+```
+```{r}
+ks$deadline <- as.Date(ks$deadline)
+ks$launched <- as.Date(ks$launched)
+ks$duration <- as.numeric(ks$deadline - ks$launched)
+summary(ks$duration)
+```
+
+
+```{r}
+class(ks$duration)
+```
+
+
+```{r}
+ks <- ks %>%
+  mutate(duration_cat = case_when(
+    duration <= 15 ~ "Short",
+    duration <= 30 ~ "Medium",
+    TRUE ~ "Long"
+  ))
+ks$duration_cat <- as.factor(ks$duration_cat)
+```
+
+
+```{r}
+summary(ks$duration_cat)
+```
+```{r}
+unique(ks$country)
+```
+```{r}
+#Sorting by continent
+ks$continent <- factor(ks$country, 
+                       levels = c("US", "CA", "MX", 
+                                  "GB", "NO", "IT", "DE", "IE", "ES", "SE", "FR", "NL", "CH", "AT", "DK", "BE", "LU",
+                                  "AU", "NZ",
+                                  "HK", "SG", "JP"),
+                       labels = c(rep("North America", 3),
+                                  rep("Europe", 14),
+                                  rep("Oceania", 2),
+                                  rep("Asia", 3)))
+```
+
+
+```{r}
+summary(ks$continent)
+```
+
+
+```{r}
+ks <- ks[complete.cases(ks), ]
+```
+```{r} 
+```
+
+
+```{r} 
+#to handle zero values, we do +1
+ks$log_usd_pledged_real <- log(ks$usd_pledged_real + 1)
+ks$log_usd_goal_real <- log(ks$usd_goal_real + 1)
+```
+
+
+```{r} 
+plot(ks$usd_pledged_real)
+plot(ks$log_usd_pledged_real)
+```
+
+
+```{r}
+```
+
+
+```{r}
+kst <- ks %>%
+  filter(main_category == "Technology")
+```
+```{r}
+unique(kst$category)
+```
+```{r}
+kst$category_group <- factor(kst$category,
+  levels = c("Software", "Web", "Apps",
+             "Hardware", "Gadgets", "Wearables", "Camera Equipment",
+             "DIY Electronics", "3D Printing", "Fabrication Tools", "Makerspaces",
+             "Robots", "Space Exploration", "Flight",
+             "Sound",
+             "Technology"),
+  labels = c(rep("Software and Web", 3),
+             rep("Hardware and Gadgets", 4),
+             rep("Maker and DIY Technologies", 4),
+             rep("Robotics and Advanced Tech", 3),
+             "Audio and Visual",
+             "General Technology")
+)
+```
+```{r}
+table(kst$category_group)
+
+# For a visual representation
+barplot(table(kst$category_group), las = 2, cex.names = 0.7)
+```
+```{r}
+summary(kst)
+```
+
+
+```{r}
+modelo <- lm(log_usd_pledged_real ~ category_group + continent + log_usd_goal_real + duration_cat + backers, data = kst)
+```
+
+
+
+```{r}
+plot(modelo)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
